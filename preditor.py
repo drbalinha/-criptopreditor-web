@@ -1,4 +1,4 @@
-# Arquivo: preditor.py (VERSAO TENSORFLOW LSTM - ORIGINAL)
+# Arquivo: preditor.py (VERSAO TENSORFLOW - CORRIGIDA PARA RENDER)
 
 import os
 import sys
@@ -6,11 +6,16 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import Sequential, load_model
-from tensorflow.keras.layers import LSTM, Dense, Dropout
+from tensorflow.keras.layers import LSTM, Dense
 import joblib
 import json
 
-print(">>> ARQUIVO PREDITOR.PY (TENSORFLOW) INICIADO &lt;<&lt;")
+print(">>> ARQUIVO PREDITOR.PY (TENSORFLOW + RENDER) INICIADO <<<")
+
+# CAMINHO DO NOSSO "DISCO RIGIDO PERSISTENTE" NO RENDER
+MODEL_STORAGE_PATH = '/var/data/models'
+# GARANTE QUE A PASTA EXISTA
+os.makedirs(MODEL_STORAGE_PATH, exist_ok=True)
 
 def create_dataset(dataset, look_back=60):
     dataX, dataY = [], []
@@ -23,17 +28,16 @@ def create_dataset(dataset, look_back=60):
 def run_prediction(symbol):
     symbol_safe = symbol.replace('/', '_').replace('.', '')
     
-    # PADRAO DE NOMES DE ARQUIVOS
-    model_path = f'model_{symbol_safe}.h5'
-    scaler_path = f'scaler_{symbol_safe}.pkl'
+    # NOVOS CAMINHOS USANDO O DISCO PERSISTENTE
+    model_path = os.path.join(MODEL_STORAGE_PATH, f'model_{symbol_safe}.h5')
+    scaler_path = os.path.join(MODEL_STORAGE_PATH, f'scaler_{symbol_safe}.pkl')
     
-    # 1. VERIFICAR SE O MODELO EXISTE
+    # O resto da logica eh a mesma
     if os.path.exists(model_path):
-        print(f"Modelo para {symbol} encontrado. Carregando e fazendo previsao...")
+        print(f"Modelo para {symbol} encontrado em {model_path}. Carregando...")
         model = load_model(model_path)
         scaler = joblib.load(scaler_path)
     else:
-        # 2. SE NAO EXISTE, TREINA UM NOVO
         print(f"Modelo para {symbol} nao encontrado. Iniciando treinamento...")
         
         file_path = f'Historico_Moedas/historico_{symbol_safe}.csv'
@@ -55,27 +59,30 @@ def run_prediction(symbol):
         x_train, y_train = create_dataset(train_data, look_back)
         x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 1))
         
-        model = Sequential()
-        model.add(LSTM(128, return_sequences=True, input_shape=(x_train.shape[1], 1)))
-        model.add(LSTM(64, return_sequences=False))
-        model.add(Dense(25))
-        model.add(Dense(1))
+        model = Sequential([
+            LSTM(128, return_sequences=True, input_shape=(x_train.shape[1], 1)),
+            LSTM(64, return_sequences=False),
+            Dense(25),
+            Dense(1)
+        ])
         
         model.compile(optimizer='adam', loss='mean_squared_error')
+        print(f"Iniciando treinamento do modelo para {symbol}...")
         model.fit(x_train, y_train, batch_size=1, epochs=1)
+        print("Treinamento concluido.")
         
+        print(f"Salvando modelo em: {model_path}")
         model.save(model_path)
         joblib.dump(scaler, scaler_path)
 
-    # 3. FAZENDO A PREVISAO
+    # FAZENDO A PREVISAO
     file_path = f'Historico_Moedas/historico_{symbol_safe}.csv'
     df = pd.read_csv(file_path)
     data = df.filter(['close'])
     last_60_days = data[-60:].values
     last_60_days_scaled = scaler.transform(last_60_days)
     
-    X_pred = []
-    X_pred.append(last_60_days_scaled)
+    X_pred = [last_60_days_scaled]
     X_pred = np.array(X_pred)
     X_pred = np.reshape(X_pred, (X_pred.shape[0], X_pred.shape[1], 1))
     
@@ -97,4 +104,4 @@ if __name__ == '__main__':
         resultado = run_prediction(moeda)
         print(json.dumps(resultado, indent=4))
     else:
-        print("Por favor, forneca o simbolo da moeda como argumento. Ex: python preditor.py BTC/USDT")
+        print("Por favor, forneca o simbolo da moeda como argumento.")
