@@ -1,0 +1,1 @@
+flask flask-cors pandas scikit-learn ccxt joblib gunicorn
