@@ -1,4 +1,4 @@
-# Arquivo: app.py (VERSAO FINAL - Leve e Rapida)
+# Arquivo: app.py (VERSAO FINAL - Compativel com Scikit-learn)
 
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
@@ -7,8 +7,7 @@ import preditor
 app = Flask(__name__)
 CORS(app)
 
-print(">>> APLICACAO WEB INICIADA (MODO PREVISAO) &lt;&lt;&lt;")
-print("Esta aplicacao NAO treinara modelos. Apenas fara previsoes com modelos existentes.")
+print(">>> APLICACAO WEB (Scikit-learn) INICIADA &lt;&lt;&lt;")
 
 @app.route('/')
 def index():
@@ -17,12 +16,10 @@ def index():
 @app.route('/predict/<path:symbol>', methods=['GET'])
 def predict(symbol):
     print(f"Recebida requisicao de previsao para: {symbol}")
-    # Chamamos com allow_training=False por seguranca.
-    # O app web NUNCA deve treinar.
-    result = preditor.run_prediction(symbol, allow_training=False) 
+    result = preditor.run_prediction(symbol) 
     
     if "error" in result:
-        return jsonify(result), 404 # Retorna um erro se o modelo nao existir
+        return jsonify(result), 404
     
     return jsonify(result)
 
