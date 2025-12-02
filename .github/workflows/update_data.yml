@@ -1,12 +1,9 @@
-# Nome do nosso robo
 name: Atualizacao Diaria de Dados
 
 on:
-  # O Agendamento
   schedule:
     - cron: '0 2 * * *'
   
-  # O Botao Manual
   workflow_dispatch:
 
 jobs:
@@ -14,34 +11,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Passo 1: Baixar o codigo do repositorio para a maquina virtual
       - name: Checkout do Repositorio
         uses: actions/checkout@v4
         with:
-          # Especifica um caminho para evitar a duplicacao do nome do repo
           path: './-criptopreditor-web'
 
-      # Passo 2: Configurar o ambiente Python
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
 
-      # Passo 3: Instalar as bibliotecas necessarias para o script
       - name: Instalar Dependencias
         run: |
           python -m pip install --upgrade pip
           pip install pandas ccxt
 
-      # Passo 4: Executar o script de coleta de dados
       - name: Rodar Script de Coleta
-        # CORRECAO: Especifica o diretorio de trabalho
         working-directory: ./-criptopreditor-web
         run: python coleta_dados.py
 
-      # Passo 5: Fazer o commit automatico dos arquivos CSV atualizados
       - name: Commit dos Arquivos Atualizados
-        # CORRECAO: Especifica o diretorio de trabalho
         working-directory: ./-criptopreditor-web
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
