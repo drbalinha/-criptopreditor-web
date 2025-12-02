@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Análise Cripto</title>
+    <style>
+        /* CSS para deixar a página bonita e minimalista */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #1c1e21;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #main-container {
+            width: 100%;
+            max-width: 800px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        h1 {
+            color: #1877f2;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        #control-panel {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        #analyze-btn {
+            background-color: #1877f2;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #analyze-btn:disabled {
+            background-color: #a0bdf0;
+            cursor: not-allowed;
+        }
+        #analyze-btn:hover:not(:disabled) {
+            background-color: #166fe5;
+        }
+        #status {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 20px;
+            height: 20px;
+        }
+        #results-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        #results-table th, #results-table td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+        #results-table th {
+            background-color: #f0f2f5;
+        }
+        .tag {
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .tag-alta { background-color: #28a745; }
+        .tag-moderada { background-color: #ffc107; color: black; }
+        .tag-baixa { background-color: #dc3545; }
+        .tag-erro { background-color: #6c757d; }
+        .tag-positivo { background-color: #17a2b8; }
+        .tag-negativo { background-color: #6c757d; }
+    </style>
+</head>
+<body>
+
+    <div id="main-container">
+        <h1>Painel de Análise de Criptomoedas</h1>
+
+        <div id="control-panel">
+            <button id="analyze-btn">Analisar TOP 20 Moedas</button>
+        </div>
+
+        <div id="status"></div>
+
+        <table id="results-table">
+            <thead>
+                <tr>
+                    <th>Ativo</th>
+                    <th>Probabilidade</th>
+                    <th>Avaliação</th>
+                    <th>Sentimento</th>
+                </tr>
+            </thead>
+            <tbody id="results-body">
+                <!-- Os resultados aparecerão aqui dinamicamente -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // JavaScript para fazer a mágica acontecer
+
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const statusDiv = document.getElementById('status');
+        const resultsBody = document.getElementById('results-body');
+
+        analyzeBtn.addEventListener('click', async () => {
+            // Desabilita o botão e limpa resultados antigos
+            analyzeBtn.disabled = true;
+            statusDiv.textContent = 'Analisando... Por favor, aguarde. Isso pode levar alguns minutos.';
+            resultsBody.innerHTML = '';
+
+            try {
+                // Chama o nosso backend (o app.py)!
+                const response = await fetch('http://localhost:5000/analisar_tudo');
+                
+                if (!response.ok) {
+                    throw new Error(`Erro na rede: ${response.statusText}`);
+                }
+
+                const results = await response.json();
+                
+                statusDiv.textContent = 'Análise concluída!';
+                displayResults(results);
+
+            } catch (error) {
+                statusDiv.textContent = `Ocorreu um erro: ${error.message}`;
+                console.error('Erro ao buscar dados:', error);
+            } finally {
+                // Reabilita o botão no final
+                analyzeBtn.disabled = false;
+            }
+        });
+
+        function displayResults(results) {
+            resultsBody.innerHTML = ''; // Limpa a tabela antes de preencher
+            for (const result of results) {
+                const row = document.createElement('tr');
+
+                // Se for um item de erro
+                if (result.error) {
+                    const cellError = document.createElement('td');
+                    cellError.colSpan = 4;
+                    
+                    const tickerSpan = document.createElement('strong');
+                    // Tentamos extrair o ticker do erro, se possível
+                    const tickerMatch = result.error.match(/para (\w+\/\w+)/);
+                    tickerSpan.textContent = tickerMatch ? `${tickerMatch[1]}: ` : 'Erro: ';
+
+                    cellError.appendChild(tickerSpan);
+                    cellError.append(result.error);
+                    cellError.style.color = '#dc3545';
+                    row.appendChild(cellError);
+
+                } else { // Se for um item de sucesso
+                    // Coluna Ativo
+                    const cellTicker = document.createElement('td');
+                    cellTicker.textContent = result.ticker || 'N/A';
+                    
+                    // Coluna Probabilidade
+                    const cellProb = document.createElement('td');
+                    cellProb.textContent = result.probabilidade ? `${(result.probabilidade * 100).toFixed(2)}%` : 'N/A';
+
+                    // Coluna Avaliação (com cores)
+                    const cellEval = document.createElement('td');
+                    const evalTag = document.createElement('span');
+                    evalTag.classList.add('tag');
+                    if (result.avaliacao === 'ALTA PROBABILIDADE') {
+                        evalTag.classList.add('tag-alta');
+                    } else if (result.avaliacao === 'PROBABILIDADE MODERADA') {
+                        evalTag.classList.add('tag-moderada');
+                    } else {
+                        evalTag.classList.add('tag-baixa');
+                    }
+                    evalTag.textContent = result.avaliacao || 'N/A';
+                    cellEval.appendChild(evalTag);
+
+                    // Coluna Sentimento (só aparece se existir)
+                    const cellSentiment = document.createElement('td');
+                    if (result.sentimento) {
+                        const sentimentTag = document.createElement('span');
+                        sentimentTag.classList.add('tag', result.sentimento.includes('POSITIVO') ? 'tag-positivo' : 'tag-negativo');
+                        sentimentTag.textContent = result.sentimento;
+                        cellSentiment.appendChild(sentimentTag);
+                    } else {
+                        cellSentiment.textContent = '---';
+                    }
+                    
+                    row.appendChild(cellTicker);
+                    row.appendChild(cellProb);
+                    row.appendChild(cellEval);
+                    row.appendChild(cellSentiment);
+                }
+
+                resultsBody.appendChild(row);
+            }
+        }
+    </script>
+
+</body>
+</html>
