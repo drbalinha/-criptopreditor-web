@@ -1,4 +1,4 @@
-# Arquivo: preditor.py (VERSAO FINAL - Com controle de treinamento)
+# Arquivo: preditor.py (VERSAO FINAL v2 - Correcao de Permissao)
 
 import os
 import sys
@@ -10,10 +10,14 @@ from tensorflow.keras.layers import LSTM, Dense
 import joblib
 import json
 
-MODEL_STORAGE_PATH = '/var/data/models'
+# --- CORRECAO ESTA AQUI ---
+# Usamos diretamente o caminho do disco montado, sem tentar criar uma subpasta que causa erro de permissao.
+# O proprio Render garante que este diretorio exista.
+MODEL_STORAGE_PATH = '/var/data' 
+
+# Garantimos que o caminho exista, o que eh seguro de fazer no /var/data
 os.makedirs(MODEL_STORAGE_PATH, exist_ok=True)
 
-# ... (funcao create_dataset continua a mesma) ...
 def create_dataset(dataset, look_back=60):
     dataX, dataY = [], []
     for i in range(len(dataset) - look_back - 1):
@@ -22,31 +26,28 @@ def create_dataset(dataset, look_back=60):
         dataY.append(dataset[i + look_back, 0])
     return np.array(dataX), np.array(dataY)
 
-# A GRANDE MUDANCA ESTA AQUI: Adicionamos 'allow_training=False'
 def run_prediction(symbol, allow_training=False):
     symbol_safe = symbol.replace('/', '_').replace('.', '')
     
+    # O caminho completo do arquivo agora eh construido corretamente
     model_path = os.path.join(MODEL_STORAGE_PATH, f'model_{symbol_safe}.h5')
     scaler_path = os.path.join(MODEL_STORAGE_PATH, f'scaler_{symbol_safe}.pkl')
     
     if os.path.exists(model_path):
-        print(f"Modelo para {symbol} encontrado. Carregando...")
+        print(f"Modelo para {symbol} encontrado em '{model_path}'. Carregando...")
         model = load_model(model_path)
         scaler = joblib.load(scaler_path)
     else:
-        # AQUI ESTA O INTERRUPTOR DE SEGURANCA
         if not allow_training:
             print(f"Modelo para {symbol} nao encontrado, e o treinamento nao esta permitido nesta chamada.")
             return {"error": f"Modelo para {symbol} ainda nao foi treinado."}
         
-        # Se allow_training for True, o codigo continua e treina o modelo
         print(f"Modelo para {symbol} nao encontrado. Iniciando treinamento (allow_training=True)...")
         
         file_path = f'Historico_Moedas/historico_{symbol_safe}.csv'
         if not os.path.exists(file_path):
             return {"error": f"Arquivo de historico para {symbol} nao encontrado."}
         
-        # ... (O restante do codigo de treinamento continua exatamente o mesmo) ...
         df = pd.read_csv(file_path)
         data = df.filter(['close'])
         dataset = data.values
@@ -87,11 +88,10 @@ def run_prediction(symbol, allow_training=False):
     }
     return response
 
-# ... (o bloco if __name__ == '__main__' continua o mesmo) ...
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         moeda = sys.argv[1]
-        resultado = run_prediction(moeda, allow_training=True) # Permitimos treino se executado manualmente
+        resultado = run_prediction(moeda, allow_training=True)
         print(json.dumps(resultado, indent=4))
     else:
         print("Por favor, forneca o simbolo da moeda como argumento.")
