@@ -2,6 +2,6 @@ flask
 flask-cors 
 pandas 
 scikit-learn 
-ccxt 
+xgboost
 joblib 
 gunicorn
