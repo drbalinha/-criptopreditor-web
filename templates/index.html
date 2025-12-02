@@ -3,210 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel de Análise Cripto</title>
+    <title>Preditor de Criptomoedas</title>
     <style>
-        /* CSS para deixar a página bonita e minimalista */
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f0f2f5;
-            color: #1c1e21;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        #main-container {
-            width: 100%;
-            max-width: 800px;
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-        }
-        h1 {
-            color: #1877f2;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        #control-panel {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        #analyze-btn {
-            background-color: #1877f2;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        #analyze-btn:disabled {
-            background-color: #a0bdf0;
-            cursor: not-allowed;
-        }
-        #analyze-btn:hover:not(:disabled) {
-            background-color: #166fe5;
-        }
-        #status {
-            text-align: center;
-            font-weight: bold;
-            margin-bottom: 20px;
-            height: 20px;
-        }
-        #results-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        #results-table th, #results-table td {
-            padding: 12px;
-            border-bottom: 1px solid #ddd;
-            text-align: left;
-        }
-        #results-table th {
-            background-color: #f0f2f5;
-        }
-        .tag {
-            padding: 4px 8px;
-            border-radius: 4px;
-            color: white;
-            font-weight: bold;
-            font-size: 12px;
-        }
-        .tag-alta { background-color: #28a745; }
-        .tag-moderada { background-color: #ffc107; color: black; }
-        .tag-baixa { background-color: #dc3545; }
-        .tag-erro { background-color: #6c757d; }
-        .tag-positivo { background-color: #17a2b8; }
-        .tag-negativo { background-color: #6c757d; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 20px auto; padding: 0 15px; background-color: #f4f4f9; }
+        h1 { color: #2c3e50; text-align: center; }
+        #controls { text-align: center; margin-bottom: 20px; }
+        button { background-color: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 16px; transition: background-color 0.3s; }
+        button:hover { background-color: #2980b9; }
+        button:disabled { background-color: #95a5a6; cursor: not-allowed; }
+        #results { border-top: 2px solid #ddd; padding-top: 20px; }
+        .result-card { background-color: white; border: 1px solid #ecf0f1; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .result-card h2 { margin-top: 0; color: #34495a; }
+        .price { font-size: 1.1em; }
+        .price-up { color: #2ecc71; }
+        .price-down { color: #e74c3c; }
+        #status { text-align: center; font-style: italic; color: #7f8c8d; }
     </style>
 </head>
 <body>
 
-    <div id="main-container">
-        <h1>Painel de Análise de Criptomoedas</h1>
+    <h1>Preditor de Criptomoedas</h1>
 
-        <div id="control-panel">
-            <button id="analyze-btn">Analisar TOP 20 Moedas</button>
-        </div>
-
-        <div id="status"></div>
-
-        <table id="results-table">
-            <thead>
-                <tr>
-                    <th>Ativo</th>
-                    <th>Probabilidade</th>
-                    <th>Avaliação</th>
-                    <th>Sentimento</th>
-                </tr>
-            </thead>
-            <tbody id="results-body">
-                <!-- Os resultados aparecerão aqui dinamicamente -->
-            </tbody>
-        </table>
+    <div id="controls">
+        <button id="predictBtn">Analisar Top 20 Moedas</button>
     </div>
 
+    <div id="status">Clique no botão para iniciar a análise...</div>
+    <div id="results"></div>
+
     <script>
-        // JavaScript para fazer a mágica acontecer
-
-        const analyzeBtn = document.getElementById('analyze-btn');
+        const predictBtn = document.getElementById('predictBtn');
+        const resultsDiv = document.getElementById('results');
         const statusDiv = document.getElementById('status');
-        const resultsBody = document.getElementById('results-body');
 
-        analyzeBtn.addEventListener('click', async () => {
-            // Desabilita o botão e limpa resultados antigos
-            analyzeBtn.disabled = true;
-            statusDiv.textContent = 'Analisando... Por favor, aguarde. Isso pode levar alguns minutos.';
-            resultsBody.innerHTML = '';
+        const TOP_COINS = [
+            "BTC/USDT", "ETH/USDT", "XRP/USDT", "LTC/USDT", "BCH/USDT",
+            "ADA/USDT", "DOGE/USDT", "DOT/USDT", "UNI/USDT", "LINK/USDT",
+            "SOL/USDT", "MATIC/USDT", "ETC/USDT", "FIL/USDT", "AAVE/USDT",
+            "MKR/USDT", "COMP/USDT", "SNX/USDT", "YFI/USDT", "AVAX/USDT"
+        ];
 
-            try {
-                // Chama o nosso backend (o app.py)!
-                const response = await fetch('http://localhost:5000/analisar_tudo');
+        predictBtn.addEventListener('click', async () => {
+            predictBtn.disabled = true;
+            resultsDiv.innerHTML = '';
+            statusDiv.textContent = 'Analisando... Por favor, aguarde.';
+
+            for (let i = 0; i < TOP_COINS.length; i++) {
+                const coin = TOP_COINS[i];
+                statusDiv.textContent = `Analisando ${i + 1}/${TOP_COINS.length}: ${coin}`;
                 
-                if (!response.ok) {
-                    throw new Error(`Erro na rede: ${response.statusText}`);
+                try {
+                    // AQUI ESTA A MAGICA: URL Relativa!
+                    // Ele vai chamar "/predict/BTC/USDT" no mesmo servidor que serviu a pagina,
+                    // ou seja, https://meu-preditor-cripto.onrender.com/predict/BTC/USDT
+                    const response = await fetch(`/predict/${coin}`);
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`Erro HTTP ${response.status}: ${errorText}`);
+                    }
+
+                    const data = await response.json();
+                    displayResult(data);
+
+                } catch (error) {
+                    console.error('Falha no fetch para', coin, ':', error);
+                    displayError(coin, error);
                 }
-
-                const results = await response.json();
-                
-                statusDiv.textContent = 'Análise concluída!';
-                displayResults(results);
-
-            } catch (error) {
-                statusDiv.textContent = `Ocorreu um erro: ${error.message}`;
-                console.error('Erro ao buscar dados:', error);
-            } finally {
-                // Reabilita o botão no final
-                analyzeBtn.disabled = false;
             }
+
+            predictBtn.disabled = false;
+            statusDiv.textContent = 'Análise concluída. Clique novamente para reanalisar.';
         });
 
-        function displayResults(results) {
-            resultsBody.innerHTML = ''; // Limpa a tabela antes de preencher
-            for (const result of results) {
-                const row = document.createElement('tr');
+        function displayResult(data) {
+            const card = document.createElement('div');
+            card.className = 'result-card';
+            const direction = data.predicted_price >= data.current_price ? 'price-up' : 'price-down';
+            const arrow = direction === 'price-up' ? '▲' : '▼';
+            card.innerHTML = `
+                <h2>${data.symbol}</h2>
+                <p class="price">Preço Atual: $${data.current_price.toFixed(2)}</p>
+                <p class="price ${direction}">
+                    Previsão para o Próximo Período: <strong>$${data.predicted_price.toFixed(2)}</strong> ${arrow}
+                </p>
+            `;
+            resultsDiv.appendChild(card);
+        }
 
-                // Se for um item de erro
-                if (result.error) {
-                    const cellError = document.createElement('td');
-                    cellError.colSpan = 4;
-                    
-                    const tickerSpan = document.createElement('strong');
-                    // Tentamos extrair o ticker do erro, se possível
-                    const tickerMatch = result.error.match(/para (\w+\/\w+)/);
-                    tickerSpan.textContent = tickerMatch ? `${tickerMatch[1]}: ` : 'Erro: ';
-
-                    cellError.appendChild(tickerSpan);
-                    cellError.append(result.error);
-                    cellError.style.color = '#dc3545';
-                    row.appendChild(cellError);
-
-                } else { // Se for um item de sucesso
-                    // Coluna Ativo
-                    const cellTicker = document.createElement('td');
-                    cellTicker.textContent = result.ticker || 'N/A';
-                    
-                    // Coluna Probabilidade
-                    const cellProb = document.createElement('td');
-                    cellProb.textContent = result.probabilidade ? `${(result.probabilidade * 100).toFixed(2)}%` : 'N/A';
-
-                    // Coluna Avaliação (com cores)
-                    const cellEval = document.createElement('td');
-                    const evalTag = document.createElement('span');
-                    evalTag.classList.add('tag');
-                    if (result.avaliacao === 'ALTA PROBABILIDADE') {
-                        evalTag.classList.add('tag-alta');
-                    } else if (result.avaliacao === 'PROBABILIDADE MODERADA') {
-                        evalTag.classList.add('tag-moderada');
-                    } else {
-                        evalTag.classList.add('tag-baixa');
-                    }
-                    evalTag.textContent = result.avaliacao || 'N/A';
-                    cellEval.appendChild(evalTag);
-
-                    // Coluna Sentimento (só aparece se existir)
-                    const cellSentiment = document.createElement('td');
-                    if (result.sentimento) {
-                        const sentimentTag = document.createElement('span');
-                        sentimentTag.classList.add('tag', result.sentimento.includes('POSITIVO') ? 'tag-positivo' : 'tag-negativo');
-                        sentimentTag.textContent = result.sentimento;
-                        cellSentiment.appendChild(sentimentTag);
-                    } else {
-                        cellSentiment.textContent = '---';
-                    }
-                    
-                    row.appendChild(cellTicker);
-                    row.appendChild(cellProb);
-                    row.appendChild(cellEval);
-                    row.appendChild(cellSentiment);
-                }
-
-                resultsBody.appendChild(row);
-            }
+        function displayError(coin, error) {
+            const card = document.createElement('div');
+            card.className = 'result-card';
+            card.innerHTML = `
+                <h2>${coin}</h2>
+                <p class="price-down">Falha ao buscar predição.</p>
+                <p style="font-size: 0.8em; color: #7f8c8d;">${error.message}</p>
+            `;
+            resultsDiv.appendChild(card);
         }
     </script>
 
