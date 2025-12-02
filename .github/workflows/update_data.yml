@@ -1,40 +1,11 @@
-name: Atualizacao Diaria de Dados
+name: Teste de Gatilho Manual
 
 on:
-  schedule:
-    - cron: '0 2 * * *'
-  
-  workflow_dispatch:
+  workflow_dispatch: # Apenas o gatilho manual
 
 jobs:
-  update-data-job:
+  test-job:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout do Repositorio
-        uses: actions/checkout@v4
-        with:
-          path: './-criptopreditor-web'
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-
-      - name: Instalar Dependencias
-        run: |
-          python -m pip install --upgrade pip
-          pip install pandas ccxt
-
-      - name: Rodar Script de Coleta
-        working-directory: ./-criptopreditor-web
-        run: python coleta_dados.py
-
-      - name: Commit dos Arquivos Atualizados
-        working-directory: ./-criptopreditor-web
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "Atualização automática dos dados históricos"
-          commit_user_name: "GitHub Actions Bot"
-          commit_user_email: "actions@github.com"
-          file_pattern: "Historico_Moedas/*.csv"
+      - name: Apenas um teste de echo
+        run: echo "O gatilho workflow_dispatch funcionou!"
