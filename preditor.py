@@ -8,99 +8,145 @@ import joblib
 MODEL_STORAGE_PATH = 'temp_models'
 os.makedirs(MODEL_STORAGE_PATH, exist_ok=True)
 
+
+# ============================
+# RSI
+# ============================
 def calculate_rsi(series, period=14):
-    delta = series.diff(1)
-    gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+    delta = series.diff()
+    gain = (delta.where(delta > 0, 0)).rolling(period).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(period).mean()
     rs = gain / loss
     return 100 - (100 / (1 + rs))
 
+
+# ============================
+# FEATURES
+# ============================
 def create_features(df):
-    df_copy = df.copy()
-
+    df = df.copy()
+    
     for i in range(1, 8):
-        df_copy[f'close_lag_{i}'] = df_copy['close'].shift(i)
+        df[f'close_lag_{i}'] = df['close'].shift(i)
 
-    df_copy['sma_7'] = df_copy['close'].rolling(window=7).mean()
-    df_copy['sma_30'] = df_copy['close'].rolling(window=30).mean()
-    df_copy['daily_volatility'] = df_copy['high'] - df_copy['low']
-    df_copy['rsi_14'] = calculate_rsi(df_copy['close'], 14)
+    df['sma7'] = df['close'].rolling(7).mean()
+    df['sma30'] = df['close'].rolling(30).mean()
+    df['volatility'] = df['high'] - df['low']
+    df['rsi14'] = calculate_rsi(df['close'], 14)
+    
+    return df
 
-    return df_copy
 
-def run_prediction(symbol_safe):
+# ============================
+# CARREGAR OU TREINAR MODELOS
+# ============================
+def load_models(symbol, df):
+    model_path = f"{MODEL_STORAGE_PATH}/model_xgb_{symbol}.pkl"
+    reg_path = f"{MODEL_STORAGE_PATH}/reg_rf_{symbol}.pkl"
+
+    if os.path.exists(model_path):
+        classifier = joblib.load(model_path)
+    else:
+        dfX = create_features(df.copy())
+        dfX["target"] = (dfX["close"].shift(-1) > dfX["close"]).astype(int)
+        dfX = dfX.dropna()
+        features = [c for c in dfX.columns if "lag" in c or "sma" in c or "rsi" in c or "volatility" in c]
+        classifier = XGBClassifier(eval_metric="logloss")
+        classifier.fit(dfX[features], dfX["target"])
+        joblib.dump(classifier, model_path)
+
+    if os.path.exists(reg_path):
+        regressor = joblib.load(reg_path)
+    else:
+        dfX = create_features(df.copy())
+        dfX["target_price"] = dfX["close"].shift(-1)
+        dfX = dfX.dropna()
+        features = [c for c in dfX.columns if "lag" in c or "sma" in c or "rsi" in c or "volatility" in c]
+        regressor = RandomForestRegressor()
+        regressor.fit(dfX[features], dfX["target_price"])
+        joblib.dump(regressor, reg_path)
+
+    return classifier, regressor
+
+
+# ============================
+# PREVISÃO DE 1 DIA (PADRÃO)
+# ============================
+def predict_single(df, classifier, regressor):
+    dfX = create_features(df.copy())
+    dfX = dfX.fillna(method="ffill").fillna(method="bfill")
+
+    last = dfX.iloc[-1:]
+    features = [c for c in dfX.columns if "lag" in c or "sma" in c or "rsi" in c or "volatility" in c]
+
+    p_class = classifier.predict(last[features])[0]
+    p_prob = classifier.predict_proba(last[features])[0]
+    p_price = regressor.predict(last[features])[0]
+
+    direction = "ALTA" if p_class == 1 else "BAIXA"
+    confidence = float(p_prob[p_class]) * 100
+
+    return p_price, direction, confidence
+
+
+# ============================
+# PREVISÃO MULTI-HORIZONTE
+# ============================
+def predict_multi_horizon(df, classifier, regressor, horizons=[1,7,30]):
+    results = {}
+
+    for h in horizons:
+        df_temp = df.copy()
+
+        for _ in range(h):
+            next_price, _, _ = predict_single(df_temp, classifier, regressor)
+            df_temp.loc[len(df_temp)] = {
+                "open": next_price,
+                "high": next_price,
+                "low": next_price,
+                "close": next_price,
+                "volume": df_temp["volume"].iloc[-1]
+            }
+
+        final_pred = df_temp["close"].iloc[-1]
+        results[str(h)] = float(final_pred)
+
+    return results
+
+
+# ============================
+# API PÚBLICA
+# ============================
+def run_prediction(symbol):
     try:
-        file_path = f'Historico_Moedas/historico_{symbol_safe}.csv'
+        file_path = f"Historico_Moedas/historico_{symbol}.csv"
 
         if not os.path.exists(file_path):
-            return {"error": f"Arquivo de historico para {symbol_safe} nao encontrado."}
+            return {"error": "Arquivo não encontrado"}
 
-        df_full = pd.read_csv(file_path)
-        current_price = float(df_full['close'].iloc[-1])
+        df = pd.read_csv(file_path)
+        current_price = float(df["close"].iloc[-1])
 
-        model_path = os.path.join(MODEL_STORAGE_PATH, f'model_xgb_{symbol_safe}.pkl')
-        regressor_path = os.path.join(MODEL_STORAGE_PATH, f'regressor_rf_{symbol_safe}.pkl')
+        classifier, regressor = load_models(symbol, df)
 
-        # Treina XGBClassifier se não existir
-        if os.path.exists(model_path):
-            classifier = joblib.load(model_path)
-        else:
-            df_features = create_features(df_full.copy())
-            df_features['target'] = np.where(df_features['close'].shift(-1) > df_features['close'], 1, 0)
-            df_features.dropna(inplace=True)
+        # Predição 1 Horizonte
+        pred1, direction, confidence = predict_single(df, classifier, regressor)
 
-            features = [c for c in df_features.columns if 'lag' in c or 'sma' in c or 'volatility' in c or 'rsi' in c]
-            X_train = df_features[features]
-            y_train = df_features['target']
-
-            classifier = XGBClassifier(
-                n_estimators=50,
-                eval_metric='logloss',
-                random_state=42
-            )
-            classifier.fit(X_train, y_train)
-            joblib.dump(classifier, model_path)
-
-        # Treina RandomForest se não existir
-        if os.path.exists(regressor_path):
-            regressor = joblib.load(regressor_path)
-        else:
-            df_features = create_features(df_full.copy())
-            df_features['target_price'] = df_features['close'].shift(-1)
-            df_features.dropna(inplace=True)
-
-            features = [c for c in df_features.columns if 'lag' in c or 'sma' in c or 'volatility' in c or 'rsi' in c]
-            X_train = df_features[features]
-            y_train = df_features['target_price']
-
-            regressor = RandomForestRegressor(n_estimators=30, random_state=42)
-            regressor.fit(X_train, y_train)
-            joblib.dump(regressor, regressor_path)
-
-        df_features = create_features(df_full)
-        features = [c for c in df_features.columns if 'lag' in c or 'sma' in c or 'volatility' in c or 'rsi' in c]
-
-        X_pred = df_features[features].iloc[-1:].copy()
-        X_pred.fillna(method='ffill', inplace=True)
-        X_pred.fillna(method='bfill', inplace=True)
-
-        if X_pred.isnull().values.any():
-            return {"error": "Dados insuficientes para gerar features para previsao."}
-
-        prediction_code = classifier.predict(X_pred)[0]
-        prediction_proba = classifier.predict_proba(X_pred)[0]
-        direction = "ALTA" if prediction_code == 1 else "BAIXA"
-        confidence = prediction_proba[prediction_code] * 100
-
-        predicted_price = regressor.predict(X_pred)[0]
+        # Predições Multi-Horizonte
+        multi = predict_multi_horizon(df, classifier, regressor, horizons=[1,7,30])
 
         return {
-            "symbol": symbol_safe.replace("_", "/"),
-            "current_price": round(current_price, 2),
-            "predicted_price": round(predicted_price, 2),
+            "symbol": symbol.replace("_", "/"),
+            "current_price": current_price,
             "prediction_direction": direction,
-            "prediction_confidence": round(confidence, 2),
+            "prediction_confidence": round(confidence,2),
+            "predicted_price_1": round(pred1,2),
+            "horizons": {
+                "1": round(multi["1"],2),
+                "7": round(multi["7"],2),
+                "30": round(multi["30"],2)
+            }
         }
 
     except Exception as e:
-        return {"error": f"Erro no preditor: {str(e)}"}
+        return {"error": f"Erro: {str(e)}"}
