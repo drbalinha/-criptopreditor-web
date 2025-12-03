@@ -1,5 +1,3 @@
-# Arquivo: preditor.py (VERSAO FINAL v5.1 - Com Preço Previsto)
-
 import os
 import sys
 import numpy as np
@@ -23,15 +21,11 @@ def calculate_rsi(series, period=14):
 def create_features(df):
     """Cria features (pistas) para o modelo."""
     df_copy = df.copy()
-    # Lags (memoria de curto prazo)
     for i in range(1, 8):
         df_copy[f'close_lag_{i}'] = df_copy['close'].shift(i)
-    # Medias Moveis (tendencias)
     df_copy['sma_7'] = df_copy['close'].rolling(window=7).mean()
     df_copy['sma_30'] = df_copy['close'].rolling(window=30).mean()
-    # Volatilidade
     df_copy['daily_volatility'] = df_copy['high'] - df_copy['low']
-    # RSI (momento do mercado)
     df_copy['rsi_14'] = calculate_rsi(df_copy['close'], 14)
     return df_copy
 
@@ -48,7 +42,6 @@ def run_prediction(symbol):
         df_full = pd.read_csv(file_path)
         current_price = float(df_full['close'].iloc[-1])
         
-        # Carrega ou treina o CLASSIFICADOR (direcao)
         if os.path.exists(model_path):
             classifier = joblib.load(model_path)
         else:
@@ -66,7 +59,6 @@ def run_prediction(symbol):
             classifier.fit(X_train, y_train)
             joblib.dump(classifier, model_path)
         
-        # Carrega ou treina o REGRESSADOR (preco)
         if os.path.exists(regressor_path):
             regressor = joblib.load(regressor_path)
         else:
@@ -85,20 +77,17 @@ def run_prediction(symbol):
             regressor.fit(X_train, y_train)
             joblib.dump(regressor, regressor_path)
         
-        # PREVISAO
         df_full_features = create_features(df_full)
         features = [col for col in df_full_features.columns if 'lag' in col or 'sma' in col or 'volatility' in col or 'rsi' in col]
         X_pred_row = df_full_features[features].iloc[-1:].copy()
         X_pred_row.fillna(method='ffill', inplace=True)
         X_pred_row.fillna(method='bfill', inplace=True)
 
-        # Previsao de Direcao
         prediction_code = classifier.predict(X_pred_row)[0]
         prediction_proba = classifier.predict_proba(X_pred_row)[0]
         direction = "ALTA" if prediction_code == 1 else "BAIXA"
         confidence = prediction_proba[prediction_code] * 100
 
-        # Previsao de Preco
         predicted_price = regressor.predict(X_pred_row)[0]
 
         response = {
