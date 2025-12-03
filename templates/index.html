@@ -41,7 +41,6 @@
             resultsDiv.innerHTML = '';
             statusDiv.textContent = 'Analisando... Por favor, aguarde.';
             
-            // AQUI ESTA A CORRECAO: Usando '<' diretamente
             for (let i = 0; i < TOP_COINS.length; i++) {
                 const coin = TOP_COINS[i];
                 statusDiv.textContent = `Analisando ${i + 1}/${TOP_COINS.length}: ${coin}`;
@@ -94,7 +93,7 @@
         function displayError(coin, error) {
             const card = document.createElement('div');
             card.className = 'result-card';
-            card.innerHTML = `<h2>${coin}</h2><p class="direction-down">Falha ao buscar predição. Detalhe: ${error}</p>`;
+            card.innerHTML = `<h2>${coin}</h2><p class="direction-down">Falha ao buscar predição.</p>`;
             resultsDiv.appendChild(card);
         }
     </script>
