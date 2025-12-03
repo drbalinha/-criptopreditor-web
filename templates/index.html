@@ -1,24 +1,101 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Preditor de Criptomoedas (MAX Power)</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard — Preditor de Criptomoedas</title>
+
+    <!-- Design moderno sem framework -->
     <style>
-        body { font-family: sans-serif; background:#f4f4f9; }
-        h1 { text-align:center; }
-        #controls { text-align:center; margin-bottom:20px; }
+        body {
+            margin: 0;
+            background: #f2f4f8;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                Helvetica, Arial, sans-serif;
+        }
+
+        header {
+            background: #1f2937;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 30px auto;
+            padding: 0 15px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .card h3 {
+            margin: 0 0 10px 0;
+            font-size: 18px;
+            color: #374151;
+        }
+
+        .value {
+            font-size: 30px;
+            margin-top: 5px;
+            font-weight: bold;
+        }
+
+        .green { color: #10b981; }
+        .red { color: #ef4444; }
+
+        .btn {
+            background: #2563eb;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+            transition: 0.2s;
+        }
+
+        .btn:hover { background: #1e40af; }
+
+        #loading {
+            text-align: center;
+            margin-top: 20px;
+            color: #6b7280;
+            font-style: italic;
+        }
+
+        .result-section { margin-top: 40px; }
     </style>
 </head>
+
 <body>
-    <h1>Preditor de Criptomoedas (MAX Power)</h1>
+    <header>PREDITOR DE CRIPTOMOEDAS — DASHBOARD</header>
 
-    <div id="controls">
-        <button id="predictBtn">Analisar Top 20</button>
+    <div class="container">
+
+        <button id="predictBtn" class="btn">Analisar Top 20 Moedas</button>
+
+        <div id="loading">Clique para iniciar a análise...</div>
+
+        <div class="result-section" id="results"></div>
+
     </div>
-
-    <div id="status">Clique para iniciar análise...</div>
-    <div id="results"></div>
 
     <script>
         const coins = [
@@ -28,28 +105,64 @@
             "MKR/USDT","COMP/USDT","SNX/USDT","YFI/USDT","AVAX/USDT"
         ];
 
-        const botao = document.getElementById("predictBtn");
-        const status = document.getElementById("status");
+        const btn = document.getElementById("predictBtn");
+        const load = document.getElementById("loading");
         const results = document.getElementById("results");
 
-        botao.onclick = async () => {
-            botao.disabled = true;
+        btn.onclick = async () => {
+            btn.disabled = true;
+            load.innerHTML = "Analisando...";
             results.innerHTML = "";
-            status.innerHTML = "Analisando...";
 
-            for (let c of coins) {
+            for (let coin of coins) {
                 try {
-                    const r = await fetch(`/predict/${c}`);
-                    const j = await r.json();
-                    results.innerHTML += `<pre>${JSON.stringify(j,null,2)}</pre>`;
+                    const response = await fetch(`/predict/${coin}`);
+                    const data = await response.json();
+                    renderCard(data);
                 } catch {
-                    results.innerHTML += `<p>Erro em ${c}</p>`;
+                    renderError(coin);
                 }
             }
 
-            status.innerHTML = "Concluído.";
-            botao.disabled = false;
+            load.innerHTML = "Análise concluída.";
+            btn.disabled = false;
         };
+
+        function renderCard(data) {
+            const dirColor = data.prediction_direction === "ALTA" ? "green" : "red";
+            const arrow = data.prediction_direction === "ALTA" ? "▲" : "▼";
+
+            results.innerHTML += `
+                <div class="card">
+                    <h3>${data.symbol}</h3>
+
+                    <div class="value">${data.current_price}</div>
+                    <small>Preço Atual</small>
+
+                    <div class="value ${dirColor}">
+                        ${data.predicted_price} ${arrow}
+                    </div>
+                    <small>Preço Previsto</small>
+
+                    <p style="margin-top:10px;">
+                        <strong>Direção:</strong> 
+                        <span class="${dirColor}">
+                            ${data.prediction_direction} (${data.prediction_confidence}%)
+                        </span>
+                    </p>
+                </div>
+            `;
+        }
+
+        function renderError(symbol){
+            results.innerHTML += `
+                <div class="card">
+                    <h3>${symbol}</h3>
+                    <p class="red">Erro ao obter previsão.</p>
+                </div>
+            `;
+        }
     </script>
+
 </body>
 </html>
