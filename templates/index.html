@@ -54,6 +54,7 @@
         }
         .green { color: #10b981; font-weight: 600; }
         .red { color: #ef4444; font-weight: 600; }
+        .orange { color: #f59e0b; font-weight: 600; }
         #status {
             text-align: center;
             font-size: 18px;
@@ -108,15 +109,28 @@ btn.onclick = async () => {
 
     const allData = await Promise.all(promises);
 
-    // Renderizar todos os resultados
+    // Renderizar todos os cards primeiro
     allData.forEach(data => {
         if (data.error) {
-            results.innerHTML += `<div class="card"><h3>${data.symbol || "Desconhecido"}</h3><p class="red">${data.error}</p></div>`;
+            results.innerHTML += `
+                <div class="card">
+                    <h3>${data.symbol || "Desconhecido"}</h3>
+                    <p class="orange">⚠️ ${data.error}</p>
+                </div>
+            `;
         } else {
             renderCoinBlock(data);
-            renderChart(data);
         }
     });
+
+    // Aguardar DOM atualizar, depois renderizar gráficos
+    setTimeout(() => {
+        allData.forEach(data => {
+            if (!data.error) {
+                renderChart(data);
+            }
+        });
+    }, 100);
 
     status.innerHTML = "✅ Concluído.";
     btn.disabled = false;
@@ -126,7 +140,7 @@ function renderCoinBlock(data) {
     const dirColor = data.prediction_direction === "ALTA" ? "green" : "red";
     const arrow = data.prediction_direction === "ALTA" ? "▲" : "▼";
 
-    const idChart = data.symbol.replace("/", "_");
+    const idChart = data.symbol.replace(/\//g, "_");
 
     results.innerHTML += `
         <div class="card">
@@ -145,10 +159,13 @@ function renderCoinBlock(data) {
 }
 
 function renderChart(data) {
-    const idChart = data.symbol.replace("/", "_");
+    const idChart = data.symbol.replace(/\//g, "_");
     const ctx = document.getElementById(`chart_${idChart}`);
 
-    if (!ctx) return;
+    if (!ctx) {
+        console.warn(`Canvas não encontrado: chart_${idChart}`);
+        return;
+    }
 
     new Chart(ctx, {
         type: 'line',
