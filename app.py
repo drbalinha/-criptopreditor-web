@@ -5,6 +5,7 @@ import ccxt
 from supabase import create_client, Client
 import preditor
 
+
 # ========================================
 # CONFIG SUPABASE
 # ========================================
@@ -18,7 +19,7 @@ app = Flask(__name__)
 
 
 # ========================================
-# FUNÇÃO PARA COLETAR OHLC REAL DO BINANCE
+# FUNÇÃO: Buscar OHLC real da Binance
 # ========================================
 def fetch_ohlcv(symbol, timeframe):
     try:
@@ -37,37 +38,36 @@ def fetch_ohlcv(symbol, timeframe):
             })
         return rows
 
-    except Exception as e:
-        print("Erro CCXT:", e)
+    except Exception:
         return []
 
 
 # ========================================
-# SALVAR NA SUPABASE
+# FUNÇÃO: Salvar no Supabase
 # ========================================
 def save_to_supabase(symbol, timeframe, rows):
     if not rows:
         return False
 
-    symbol_clean = symbol.replace("/", "_")
+    safe = symbol.replace("/", "_")
 
     for r in rows:
         supabase.table("ohlc").insert({
-            "symbol": symbol_clean,
+            "symbol": safe,
             "timeframe": timeframe,
             "timestamp": r["timestamp"],
             "open": r["open"],
             "high": r["high"],
             "low": r["low"],
             "close": r["close"],
-            "volume": r["volume"],
+            "volume": r["volume"]
         }).execute()
 
     return True
 
 
 # ========================================
-# ROTA PRINCIPAL (DASHBOARD)
+# ROTA PRINCIPAL (Dashboard)
 # ========================================
 @app.route("/")
 def index():
@@ -75,12 +75,13 @@ def index():
 
 
 # ========================================
-# ROTA DE PREDIÇÃO
+# ROTA DE PREDIÇÃO (1 horizonte)
 # ========================================
 @app.route("/predict/<path:symbol>", methods=["GET"])
 def predict_route(symbol):
     try:
         safe_symbol = symbol.replace("/", "_").replace(".", "")
+
         result = preditor.run_prediction(safe_symbol)
 
         if "error" in result:
@@ -93,19 +94,37 @@ def predict_route(symbol):
 
 
 # ========================================
-# ROTA DE HISTÓRICO MULTI-TIMEFRAME (MÓDULO 4)
+# ROTA DE PREVISÃO MULTI-HORIZONTE (1, 7, 30)
+# ========================================
+@app.route("/predict_multi/<path:symbol>", methods=["GET"])
+def multi_route(symbol):
+    try:
+        safe = symbol.replace("/", "_")
+
+        result = preditor.run_prediction(safe)
+
+        if "error" in result:
+            return jsonify(result), 500
+
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({"error": f"Erro inesperado no servidor: {str(e)}"}), 500
+
+
+# ========================================
+# ROTA DE HISTÓRICO MULTI-TIMEFRAME
 # ========================================
 @app.route("/history/<path:symbol>", methods=["GET"])
 def history_route(symbol):
 
     timeframe = request.args.get("tf", "1d")  # default 1D
-
-    safe_symbol = symbol.replace("/", "_").replace(".", "")
+    safe = symbol.replace("/", "_").replace(".", "")
 
     query = (
         supabase.table("ohlc")
         .select("*")
-        .eq("symbol", safe_symbol)
+        .eq("symbol", safe)
         .eq("timeframe", timeframe)
         .order("timestamp", desc=False)
         .execute()
@@ -113,26 +132,28 @@ def history_route(symbol):
 
     data = query.data
 
+    # Se não existe histórico no Supabase, buscar da Binance e preencher
     if not data:
-        ohlc = fetch_ohlcv(symbol, timeframe)
-        save_to_supabase(symbol, timeframe, ohlc)
+        rows = fetch_ohlcv(symbol, timeframe)
+        if rows:
+            save_to_supabase(symbol, timeframe, rows)
 
         query = (
             supabase.table("ohlc")
             .select("*")
-            .eq("symbol", safe_symbol)
+            .eq("symbol", safe)
             .eq("timeframe", timeframe)
             .order("timestamp", desc=False)
             .execute()
         )
         data = query.data
 
-    df = pd.DataFrame(data)
-
-    if df.empty:
+    if not data:
         return jsonify({"history": []})
 
+    df = pd.DataFrame(data)
     df = df.sort_values("timestamp")
+
     df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
     df["sma7"] = df["close"].rolling(7).mean()
     df["sma30"] = df["close"].rolling(30).mean()
@@ -164,7 +185,7 @@ def history_route(symbol):
 
 
 # ========================================
-# INICIAR SERVIDOR
+# EXECUTAR SERVIDOR
 # ========================================
 if __name__ == "__main__":
     app.run()
