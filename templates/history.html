@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Histórico de Predições</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: Arial;
+            background: #f4f4f4;
+            padding: 20px;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 14px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+        select {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+
+<body>
+
+<h2>Histórico de Predições — Real x Previsto</h2>
+
+<div class="card">
+    <label>Selecione o ativo:</label>
+    <select id="symbolSelect">
+        <option>BTC_USDT</option>
+        <option>ETH_USDT</option>
+        <option>XRP_USDT</option>
+    </select>
+</div>
+
+<div class="card">
+    <canvas id="chartHistory"></canvas>
+</div>
+
+<script>
+async function loadHistory(symbol){
+    const r = await fetch(`/prediction_history/${symbol}`);
+    const j = await r.json();
+    return j.history;
+}
+
+const ctx = document.getElementById("chartHistory");
+
+let chart = null;
+
+async function renderChart(){
+    const symbol = document.getElementById("symbolSelect").value;
+    const data = await loadHistory(symbol);
+
+    const ts = data.map(x => new Date(Number(x.timestamp)));
+    const real = data.map(x => x.real_price);
+    const pred = data.map(x => x.predicted_price);
+
+    if (chart) chart.destroy();
+
+    chart = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: ts,
+            datasets: [
+                {
+                    label: "Preço Real",
+                    data: real,
+                    borderColor: "#2563eb",
+                    borderWidth: 2
+                },
+                {
+                    label: "Previsto",
+                    data: pred,
+                    borderColor: "#ef4444",
+                    borderWidth: 2
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+        }
+    })
+}
+
+document.getElementById("symbolSelect").onchange = renderChart;
+
+renderChart();
+</script>
+
+</body>
+</html>
