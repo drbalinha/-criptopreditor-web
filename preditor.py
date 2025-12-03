@@ -8,6 +8,9 @@ import joblib
 MODEL_STORAGE_PATH = 'temp_models'
 os.makedirs(MODEL_STORAGE_PATH, exist_ok=True)
 
+# Cache de DataFrames carregados
+df_cache = {}
+
 
 # ============================
 # RSI
@@ -51,7 +54,14 @@ def load_models(symbol, df):
         dfX["target"] = (dfX["close"].shift(-1) > dfX["close"]).astype(int)
         dfX = dfX.dropna()
         features = [c for c in dfX.columns if "lag" in c or "sma" in c or "rsi" in c or "volatility" in c]
-        classifier = XGBClassifier(eval_metric="logloss")
+        
+        # XGBoost mais rápido
+        classifier = XGBClassifier(
+            eval_metric="logloss",
+            n_estimators=50,  # Reduzido de 100
+            max_depth=3,      # Reduzido de 6
+            n_jobs=1
+        )
         classifier.fit(dfX[features], dfX["target"])
         joblib.dump(classifier, model_path)
 
@@ -62,7 +72,13 @@ def load_models(symbol, df):
         dfX["target_price"] = dfX["close"].shift(-1)
         dfX = dfX.dropna()
         features = [c for c in dfX.columns if "lag" in c or "sma" in c or "rsi" in c or "volatility" in c]
-        regressor = RandomForestRegressor()
+        
+        # RandomForest mais rápido
+        regressor = RandomForestRegressor(
+            n_estimators=30,  # Reduzido de 100
+            max_depth=5,      # Limitado
+            n_jobs=1
+        )
         regressor.fit(dfX[features], dfX["target_price"])
         joblib.dump(regressor, reg_path)
 
@@ -74,7 +90,7 @@ def load_models(symbol, df):
 # ============================
 def predict_single(df, classifier, regressor):
     dfX = create_features(df.copy())
-    dfX = dfX.fillna(method="ffill").fillna(method="bfill")
+    dfX = dfX.ffill().bfill()
 
     last = dfX.iloc[-1:]
     features = [c for c in dfX.columns if "lag" in c or "sma" in c or "rsi" in c or "volatility" in c]
@@ -90,28 +106,32 @@ def predict_single(df, classifier, regressor):
 
 
 # ============================
-# PREVISÃO MULTI-HORIZONTE
+# PREVISÃO MULTI-HORIZONTE (OTIMIZADA)
 # ============================
-def predict_multi_horizon(df, classifier, regressor, horizons=[1,7,30]):
-    results = {}
-
-    for h in horizons:
-        df_temp = df.copy()
-
-        for _ in range(h):
-            next_price, _, _ = predict_single(df_temp, classifier, regressor)
-            df_temp.loc[len(df_temp)] = {
-                "open": next_price,
-                "high": next_price,
-                "low": next_price,
-                "close": next_price,
-                "volume": df_temp["volume"].iloc[-1]
-            }
-
-        final_pred = df_temp["close"].iloc[-1]
-        results[str(h)] = float(final_pred)
-
-    return results
+def predict_multi_horizon_fast(df, classifier, regressor):
+    """Versão otimizada: calcula apenas 1, 7 e 30 sem iterações completas"""
+    
+    dfX = create_features(df.copy())
+    dfX = dfX.ffill().bfill()
+    
+    last = dfX.iloc[-1:]
+    features = [c for c in dfX.columns if "lag" in c or "sma" in c or "rsi" in c or "volatility" in c]
+    
+    # Predição base
+    pred_1 = regressor.predict(last[features])[0]
+    
+    # Estimativa rápida para 7 e 30 dias (sem iteração completa)
+    current = float(df["close"].iloc[-1])
+    change_rate = (pred_1 - current) / current
+    
+    pred_7 = pred_1 * (1 + change_rate * 3)   # Aproximação
+    pred_30 = pred_1 * (1 + change_rate * 8)  # Aproximação
+    
+    return {
+        "1": float(pred_1),
+        "7": float(pred_7),
+        "30": float(pred_30)
+    }
 
 
 # ============================
@@ -124,7 +144,13 @@ def run_prediction(symbol):
         if not os.path.exists(file_path):
             return {"error": "Arquivo não encontrado"}
 
-        df = pd.read_csv(file_path)
+        # Cache de DataFrame
+        if symbol in df_cache:
+            df = df_cache[symbol]
+        else:
+            df = pd.read_csv(file_path)
+            df_cache[symbol] = df
+
         current_price = float(df["close"].iloc[-1])
 
         classifier, regressor = load_models(symbol, df)
@@ -132,19 +158,19 @@ def run_prediction(symbol):
         # Predição 1 Horizonte
         pred1, direction, confidence = predict_single(df, classifier, regressor)
 
-        # Predições Multi-Horizonte
-        multi = predict_multi_horizon(df, classifier, regressor, horizons=[1,7,30])
+        # Predições Multi-Horizonte (VERSÃO RÁPIDA)
+        multi = predict_multi_horizon_fast(df, classifier, regressor)
 
         return {
             "symbol": symbol.replace("_", "/"),
             "current_price": current_price,
             "prediction_direction": direction,
-            "prediction_confidence": round(confidence,2),
-            "predicted_price_1": round(pred1,2),
+            "prediction_confidence": round(confidence, 2),
+            "predicted_price_1": round(pred1, 2),
             "horizons": {
-                "1": round(multi["1"],2),
-                "7": round(multi["7"],2),
-                "30": round(multi["30"],2)
+                "1": round(multi["1"], 2),
+                "7": round(multi["7"], 2),
+                "30": round(multi["30"], 2)
             }
         }
 
