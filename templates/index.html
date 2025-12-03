@@ -3,166 +3,137 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dashboard — Preditor de Criptomoedas</title>
+    <title>Preditor — Dashboard Avançado</title>
 
-    <!-- Design moderno sem framework -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
         body {
             margin: 0;
             background: #f2f4f8;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-                Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
         }
-
         header {
             background: #1f2937;
             color: white;
-            padding: 20px;
             text-align: center;
-            font-size: 24px;
-            font-weight: bold;
-            letter-spacing: 1px;
+            padding: 20px;
+            font-size: 22px;
+            font-weight: 600;
         }
-
         .container {
             max-width: 1100px;
-            margin: 30px auto;
-            padding: 0 15px;
+            margin: 20px auto;
+            padding: 10px;
         }
-
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 20px;
         }
-
         .card {
             background: white;
             padding: 20px;
             border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
         }
-
-        .card h3 {
-            margin: 0 0 10px 0;
-            font-size: 18px;
-            color: #374151;
+        canvas {
+            margin-top: 20px;
         }
-
-        .value {
-            font-size: 30px;
-            margin-top: 5px;
-            font-weight: bold;
-        }
-
-        .green { color: #10b981; }
-        .red { color: #ef4444; }
-
         .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
             background: #2563eb;
             color: white;
-            padding: 12px 20px;
-            border: none;
-            border-radius: 8px;
             font-size: 16px;
+            border-radius: 12px;
             cursor: pointer;
-            width: 100%;
-            margin-top: 20px;
-            transition: 0.2s;
+            margin-bottom: 20px;
         }
-
-        .btn:hover { background: #1e40af; }
-
-        #loading {
-            text-align: center;
-            margin-top: 20px;
-            color: #6b7280;
-            font-style: italic;
-        }
-
-        .result-section { margin-top: 40px; }
+        .green { color: #10b981; }
+        .red { color: #ef4444; }
     </style>
 </head>
 
 <body>
-    <header>PREDITOR DE CRIPTOMOEDAS — DASHBOARD</header>
 
-    <div class="container">
+<header>DASHBOARD — Preditor de Criptomoedas</header>
 
-        <button id="predictBtn" class="btn">Analisar Top 20 Moedas</button>
+<div class="container">
 
-        <div id="loading">Clique para iniciar a análise...</div>
+    <button id="predictBtn" class="btn">Analisar Top 20</button>
 
-        <div class="result-section" id="results"></div>
+    <div id="status">Clique para iniciar.</div>
 
-    </div>
+    <div id="results"></div>
 
-    <script>
-        const coins = [
-            "BTC/USDT","ETH/USDT","XRP/USDT","LTC/USDT","BCH/USDT",
-            "ADA/USDT","DOGE/USDT","DOT/USDT","UNI/USDT","LINK/USDT",
-            "SOL/USDT","MATIC/USDT","ETC/USDT","FIL/USDT","AAVE/USDT",
-            "MKR/USDT","COMP/USDT","SNX/USDT","YFI/USDT","AVAX/USDT"
-        ];
+</div>
 
-        const btn = document.getElementById("predictBtn");
-        const load = document.getElementById("loading");
-        const results = document.getElementById("results");
+<script src="/static/js/charts.js"></script>
 
-        btn.onclick = async () => {
-            btn.disabled = true;
-            load.innerHTML = "Analisando...";
-            results.innerHTML = "";
+<script>
+const coins = [
+    "BTC/USDT","ETH/USDT","XRP/USDT","LTC/USDT","BCH/USDT",
+    "ADA/USDT","DOGE/USDT","DOT/USDT","UNI/USDT","LINK/USDT",
+    "SOL/USDT","MATIC/USDT","ETC/USDT","FIL/USDT","AAVE/USDT",
+    "MKR/USDT","COMP/USDT","SNX/USDT","YFI/USDT","AVAX/USDT"
+];
 
-            for (let coin of coins) {
-                try {
-                    const response = await fetch(`/predict/${coin}`);
-                    const data = await response.json();
-                    renderCard(data);
-                } catch {
-                    renderError(coin);
-                }
-            }
+const btn = document.getElementById("predictBtn");
+const status = document.getElementById("status");
+const results = document.getElementById("results");
 
-            load.innerHTML = "Análise concluída.";
-            btn.disabled = false;
-        };
+btn.onclick = async () => {
+    btn.disabled = true;
+    status.innerHTML = "Analisando...";
 
-        function renderCard(data) {
-            const dirColor = data.prediction_direction === "ALTA" ? "green" : "red";
-            const arrow = data.prediction_direction === "ALTA" ? "▲" : "▼";
+    results.innerHTML = "";
 
-            results.innerHTML += `
-                <div class="card">
-                    <h3>${data.symbol}</h3>
+    for (let coin of coins) {
+        try {
+            const r = await fetch(`/predict/${coin}`);
+            const data = await r.json();
 
-                    <div class="value">${data.current_price}</div>
-                    <small>Preço Atual</small>
+            renderCoinBlock(data);
 
-                    <div class="value ${dirColor}">
-                        ${data.predicted_price} ${arrow}
-                    </div>
-                    <small>Preço Previsto</small>
+            // 🔥 Carregar dados históricos (precisaremos criar endpoint no Módulo 3)
+            // por enquanto, gráfico vazio:
+            renderEmptyChart(data.symbol.replace("/", "_"));
 
-                    <p style="margin-top:10px;">
-                        <strong>Direção:</strong> 
-                        <span class="${dirColor}">
-                            ${data.prediction_direction} (${data.prediction_confidence}%)
-                        </span>
-                    </p>
-                </div>
-            `;
+        } catch (error) {
+            results.innerHTML += `<div class="card"><h3>${coin}</h3><p class="red">Erro.</p></div>`;
         }
+    }
 
-        function renderError(symbol){
-            results.innerHTML += `
-                <div class="card">
-                    <h3>${symbol}</h3>
-                    <p class="red">Erro ao obter previsão.</p>
-                </div>
-            `;
-        }
-    </script>
+    status.innerHTML = "Concluído.";
+    btn.disabled = false;
+};
+
+function renderCoinBlock(data) {
+    const dirColor = data.prediction_direction === "ALTA" ? "green" : "red";
+    const arrow = data.prediction_direction === "ALTA" ? "▲" : "▼";
+
+    const idChart = data.symbol.replace("/", "_");
+
+    results.innerHTML += `
+        <div class="card">
+            <h2>${data.symbol}</h2>
+            <p><strong>Atual:</strong> ${data.current_price}</p>
+            <p class="${dirColor}">
+                <strong>Previsto:</strong> ${data.predicted_price} ${arrow}
+            </p>
+            <p><strong>Confiança:</strong> ${data.prediction_confidence}%</p>
+
+            <canvas id="chart_${idChart}" height="180"></canvas>
+        </div>
+    `;
+}
+
+function renderEmptyChart(symbol){
+    renderCharts(`chart_${symbol}`, [], 0);
+}
+</script>
 
 </body>
 </html>
