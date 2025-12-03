@@ -70,8 +70,6 @@
 
 </div>
 
-<script src="/static/js/charts.js"></script>
-
 <script>
 const coins = [
     "BTC/USDT","ETH/USDT","XRP/USDT","LTC/USDT","BCH/USDT",
@@ -96,10 +94,7 @@ btn.onclick = async () => {
             const data = await r.json();
 
             renderCoinBlock(data);
-
-            // 🔥 Carregar dados históricos (precisaremos criar endpoint no Módulo 3)
-            // por enquanto, gráfico vazio:
-            renderEmptyChart(data.symbol.replace("/", "_"));
+            renderChart(data);
 
         } catch (error) {
             results.innerHTML += `<div class="card"><h3>${coin}</h3><p class="red">Erro.</p></div>`;
@@ -119,9 +114,9 @@ function renderCoinBlock(data) {
     results.innerHTML += `
         <div class="card">
             <h2>${data.symbol}</h2>
-            <p><strong>Atual:</strong> ${data.current_price}</p>
+            <p><strong>Atual:</strong> $${data.current_price}</p>
             <p class="${dirColor}">
-                <strong>Previsto:</strong> ${data.predicted_price} ${arrow}
+                <strong>Previsto:</strong> $${data.predicted_price_1} ${arrow}
             </p>
             <p><strong>Confiança:</strong> ${data.prediction_confidence}%</p>
 
@@ -130,8 +125,34 @@ function renderCoinBlock(data) {
     `;
 }
 
-function renderEmptyChart(symbol){
-    renderCharts(`chart_${symbol}`, [], 0);
+function renderChart(data) {
+    const idChart = data.symbol.replace("/", "_");
+    const ctx = document.getElementById(`chart_${idChart}`);
+
+    if (!ctx) return;
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['Atual', 'H1', 'H7', 'H30'],
+            datasets: [{
+                label: 'Previsão',
+                data: [
+                    data.current_price,
+                    data.horizons["1"],
+                    data.horizons["7"],
+                    data.horizons["30"]
+                ],
+                borderColor: '#2563eb',
+                borderWidth: 2,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
 }
 </script>
 
