@@ -1,0 +1,137 @@
+import requests
+import os
+from datetime import datetime, timedelta
+from dotenv import load_dotenv
+
+load_dotenv()
+
+NEWS_API_KEY = os.getenv('NEWS_API_KEY', 'sua_chave_aqui')
+
+def fetch_crypto_news(symbol, limit=5):
+    """
+    Busca notícias sobre uma moeda específica
+    
+    Args:
+        symbol: Nome da moeda (ex: 'Bitcoin', 'Ethereum')
+        limit: Número de notícias a retornar
+    
+    Returns:
+        Lista de notícias com título, descrição, URL e data
+    """
+    try:
+        # Converter símbolo para nome legível
+        symbol_names = {
+            'BTC': 'Bitcoin',
+            'ETH': 'Ethereum',
+            'XRP': 'Ripple',
+            'LTC': 'Litecoin',
+            'BCH': 'Bitcoin Cash',
+            'ADA': 'Cardano',
+            'DOGE': 'Dogecoin',
+            'DOT': 'Polkadot',
+            'UNI': 'Uniswap',
+            'LINK': 'Chainlink',
+            'SOL': 'Solana',
+            'MATIC': 'Polygon',
+            'ETC': 'Ethereum Classic',
+            'FIL': 'Filecoin',
+            'AAVE': 'Aave',
+            'MKR': 'Maker',
+            'COMP': 'Compound',
+            'SNX': 'Synthetix',
+            'YFI': 'Yearn',
+            'AVAX': 'Avalanche'
+        }
+        
+        coin_name = symbol_names.get(symbol, symbol)
+        
+        # Data de 7 dias atrás
+        from_date = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
+        
+        # URL da NewsAPI
+        url = "https://newsapi.org/v2/everything"
+        
+        params = {
+            'q': f'{coin_name} cryptocurrency',
+            'sortBy': 'publishedAt',
+            'language': 'en',
+            'from': from_date,
+            'pageSize': limit,
+            'apiKey': NEWS_API_KEY
+        }
+        
+        print(f"[NEWS] Buscando notícias para {coin_name}...")
+        
+        response = requests.get(url, params=params, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            articles = data.get('articles', [])
+            
+            news_list = []
+            for article in articles[:limit]:
+                news_list.append({
+                    'title': article.get('title', 'Sem título'),
+                    'description': article.get('description', 'Sem descrição'),
+                    'url': article.get('url', ''),
+                    'source': article.get('source', {}).get('name', 'Desconhecido'),
+                    'publishedAt': article.get('publishedAt', ''),
+                    'image': article.get('urlToImage', '')
+                })
+            
+            print(f"[NEWS] ✅ {len(news_list)} notícias encontradas para {coin_name}")
+            return news_list
+        
+        else:
+            print(f"[NEWS] ⚠️ Erro na API: {response.status_code}")
+            return []
+    
+    except Exception as e:
+        print(f"[NEWS] ❌ Erro ao buscar notícias: {str(e)}")
+        return []
+
+
+def fetch_market_news(limit=10):
+    """
+    Busca notícias gerais do mercado crypto
+    
+    Returns:
+        Lista de notícias do mercado
+    """
+    try:
+        from_date = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
+        
+        url = "https://newsapi.org/v2/everything"
+        
+        params = {
+            'q': 'cryptocurrency market',
+            'sortBy': 'publishedAt',
+            'language': 'en',
+            'from': from_date,
+            'pageSize': limit,
+            'apiKey': NEWS_API_KEY
+        }
+        
+        response = requests.get(url, params=params, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            articles = data.get('articles', [])
+            
+            news_list = []
+            for article in articles[:limit]:
+                news_list.append({
+                    'title': article.get('title', 'Sem título'),
+                    'description': article.get('description', 'Sem descrição'),
+                    'url': article.get('url', ''),
+                    'source': article.get('source', {}).get('name', 'Desconhecido'),
+                    'publishedAt': article.get('publishedAt', '')
+                })
+            
+            return news_list
+        
+        return []
+    
+    except Exception as e:
+        print(f"[NEWS] ❌ Erro ao buscar notícias do mercado: {str(e)}")
+        return []
