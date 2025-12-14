@@ -3,8 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Dashboard Cripto</title>
+    <title>Dashboard Cripto - Predições ML</title>
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚀</text></svg>">
+    <!-- Chart.js para gráficos (se necessário, pode ser adicionado depois) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Estilos CSS -->
     <style>
+        /* Reset básico e estilos globais */
         * {
             margin: 0;
             padding: 0;
@@ -13,211 +19,1115 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); /* Gradiente de fundo */
             min-height: 100vh;
+            padding: 20px;
+            color: #333;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+
+        /* Estilos do Header */
+        header {
+            background: white;
+            padding: 25px 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap; /* Permite que os itens quebrem a linha em telas menores */
+            gap: 20px; /* Espaçamento entre os itens do header */
+        }
+
+        h1 {
+            color: #667eea;
+            font-size: 2.2em;
             display: flex;
             align-items: center;
-            justify-content: center;
-            padding: 20px;
+            gap: 15px;
+            font-weight: 700;
         }
 
-        .login-container {
-            background: white;
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            width: 100%;
-            max-width: 400px;
+        h1 span {
+            font-size: 1.2em; /* Tamanho do emoji */
         }
 
-        .login-header {
-            text-align: center;
-            margin-bottom: 30px;
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
         }
 
-        .login-header h1 {
-            color: #667eea;
-            font-size: 2em;
-            margin-bottom: 10px;
-        }
-
-        .login-header p {
+        .user-email {
             color: #666;
             font-size: 0.95em;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            color: #333;
-            font-weight: 600;
-            margin-bottom: 8px;
-            font-size: 0.95em;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e0e0e0;
+            font-weight: 500;
+            padding: 5px 10px;
+            background: #f0f2f5;
             border-radius: 8px;
-            font-size: 1em;
-            transition: all 0.3s;
         }
 
-        .form-group input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .btn-login {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+        /* Estilos dos Botões */
+        .btn {
+            padding: 12px 25px;
             border: none;
             border-radius: 8px;
+            cursor: pointer;
             font-size: 1em;
             font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.3s ease; /* Transição suave para hover */
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
 
-        .btn-login:hover {
+        .btn:hover {
             transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
 
-        .btn-login:disabled {
+        .btn-primary:disabled {
             opacity: 0.6;
             cursor: not-allowed;
             transform: none;
+            box-shadow: none;
         }
 
-        .error-message {
-            background: #fee;
-            color: #c33;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: none;
-            font-size: 0.9em;
+        .btn-secondary {
+            background: #f0f2f5;
+            color: #333;
+            border: 1px solid #e0e0e0;
         }
 
-        .error-message.active {
-            display: block;
+        .btn-secondary:hover {
+            background: #e6e8eb;
+            color: #111;
         }
 
-        .credentials-info {
-            margin-top: 25px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
+        .btn-danger {
+            background: #ff4757;
+            color: white;
         }
 
-        .credentials-info h3 {
+        .btn-danger:hover {
+            background: #e63946;
+        }
+
+        /* Box de Cotação USD/BRL */
+        .usd-box {
+            background: white;
+            padding: 18px 25px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .usd-label {
             color: #667eea;
-            font-size: 0.9em;
+            font-weight: bold;
+            font-size: 1.05em;
+        }
+
+        .usd-value {
+            color: #333;
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-left: 8px;
+        }
+
+        .usd-note {
+            color: #999;
+            font-size: 0.88em;
+            margin-left: 10px;
+        }
+
+        /* Controles (Botão de Análise) */
+        .controls {
+            background: white;
+            padding: 20px 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* Loading State */
+        .loading {
+            display: none; /* Escondido por padrão */
+            text-align: center;
+            padding: 50px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-top: 30px;
+        }
+
+        .loading.active {
+            display: block; /* Ativado quando a análise começa */
+        }
+
+        .spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite; /* Animação de rotação */
+            margin: 0 auto 25px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading h2 {
+            color: #667eea;
+            font-size: 1.8em;
             margin-bottom: 10px;
         }
 
-        .credentials-info p {
+        .loading p {
             color: #666;
-            font-size: 0.85em;
-            margin: 5px 0;
+            font-size: 1.1em;
         }
 
-        .credentials-info code {
-            background: #fff;
-            padding: 2px 6px;
-            border-radius: 4px;
+        /* Grid de Moedas */
+        .coins-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* Layout responsivo de grid */
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        /* Card Individual da Moeda */
+        .coin-card {
+            background: white;
+            border-radius: 18px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 180px; /* Altura mínima para consistência */
+        }
+
+        .coin-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 18px 45px rgba(0,0,0,0.3);
+            border: 2px solid #667eea; /* Borda ao passar o mouse */
+        }
+
+        .coin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .coin-name {
+            font-size: 1.5em;
+            font-weight: bold;
             color: #333;
-            font-family: monospace;
+            flex-grow: 1;
+            text-align: left;
+        }
+
+        .sentiment-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.8em;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap; /* Evita quebra de linha */
+        }
+
+        .sentiment-bullish {
+            background: #d1fae5; /* Verde claro */
+            color: #065f46; /* Verde escuro */
+        }
+
+        .sentiment-bearish {
+            background: #fee2e2; /* Vermelho claro */
+            color: #7f1d1d; /* Vermelho escuro */
+        }
+
+        .sentiment-neutral {
+            background: #fef3c7; /* Amarelo claro */
+            color: #78350f; /* Amarelo escuro */
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr; /* Uma coluna para mobile */
+            gap: 10px;
+            margin-top: 15px;
+            text-align: left;
+        }
+
+        .metric-item {
+            background: #f8f9fa;
+            padding: 12px 15px;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .metric-label {
+            font-size: 0.85em;
+            color: #666;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .metric-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .metric-positive {
+            color: #10b981; /* Verde para alta */
+        }
+
+        .metric-negative {
+            color: #ef4444; /* Vermelho para baixa */
+        }
+
+        /* Estado Vazio */
+        .empty-state {
+            text-align: center;
+            padding: 70px 30px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-top: 30px;
+        }
+
+        .empty-state h2 {
+            color: #667eea;
+            margin-bottom: 18px;
+            font-size: 2em;
+        }
+
+        .empty-state p {
+            color: #666;
+            font-size: 1.15em;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .empty-state p:last-child {
+            margin-top: 20px;
+            font-size: 0.95em;
+            color: #999;
+        }
+
+        /* Mensagem de Erro */
+        .error {
+            background: #ffebeb; /* Fundo vermelho claro */
+            color: #c33; /* Texto vermelho escuro */
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 25px;
+            text-align: center;
+            font-weight: 600;
+            border: 1px solid #ffc0c0;
+            box-shadow: 0 2px 8px rgba(255,0,0,0.1);
+        }
+
+        /* Modal de Detalhes */
+        .modal {
+            display: none; /* Escondido por padrão */
+            position: fixed;
+            z-index: 1000; /* Acima de todo o conteúdo */
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.6); /* Overlay escuro */
+            backdrop-filter: blur(5px); /* Efeito de blur no fundo */
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 35px;
+            border-radius: 20px;
+            max-width: 700px; /* Largura máxima do modal */
+            width: 95%;
+            max-height: 90vh; /* Altura máxima para rolagem */
+            overflow-y: auto;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.4);
+            animation: slideIn 0.3s ease-out;
+            position: relative;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 18px;
+            border-bottom: 2px solid #f0f2f5;
+        }
+
+        .modal-title {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 2em;
+            cursor: pointer;
+            color: #666;
+            transition: color 0.2s ease;
+        }
+
+        .close-btn:hover {
+            color: #333;
+            transform: rotate(90deg);
+        }
+
+        .modal-section {
+            margin-bottom: 25px;
+            padding: 15px 0;
+            border-bottom: 1px dashed #e0e0e0;
+        }
+
+        .modal-section:last-of-type {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .modal-label {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: block;
+        }
+
+        .modal-value {
+            font-size: 1.25em;
+            color: #333;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-value.positive {
+            color: #10b981;
+        }
+
+        .modal-value.negative {
+            color: #ef4444;
+        }
+
+        /* Horizontes de Predição */
+        .horizons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); /* Layout responsivo */
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .horizon {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
+        }
+
+        .horizon:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        .horizon span {
+            display: block;
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .horizon strong {
+            display: block;
+            font-size: 1.1em;
+            color: #333;
+            font-weight: bold;
+        }
+
+        /* Seção de Sentimento */
+        .sentiment-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border-left: 5px solid #667eea; /* Borda colorida */
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .sentiment-title {
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sentiment-score-display {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .sentiment-bar {
+            flex: 1;
+            height: 10px;
+            background: #e0e0e0;
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .sentiment-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ef4444 0%, #f59e0b 50%, #10b981 100%); /* Gradiente de cores */
+            transition: width 0.5s ease-out;
+            border-radius: 5px;
+        }
+
+        .sentiment-value-text {
+            font-weight: bold;
+            color: #333;
+            min-width: 50px;
+            text-align: right;
+            font-size: 1.1em;
+        }
+
+        .sentiment-counts {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-around;
+            gap: 10px;
+        }
+
+        .sentiment-counts span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: 500;
+        }
+
+        /* Lista de Notícias */
+        .news-list {
+            margin-top: 15px;
+            max-height: 250px; /* Altura máxima para rolagem */
+            overflow-y: auto;
+            padding-right: 10px; /* Espaço para a barra de rolagem */
+        }
+
+        .news-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .news-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .news-list::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+
+        .news-list::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .news-item {
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
+        }
+
+        .news-item:hover {
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            transform: translateX(3px);
+        }
+
+        .news-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 0.95em;
+        }
+
+        .news-source {
+            color: #999;
+            font-size: 0.8em;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Responsividade */
+        @media (max-width: 1024px) {
+            .coins-grid {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+                margin-bottom: 15px;
+            }
+
+            .user-info {
+                flex-direction: column;
+                align-items: flex-start;
+                width: 100%;
+                gap: 10px;
+            }
+
+            .user-email {
+                width: 100%;
+                text-align: center;
+            }
+
+            .btn {
+                width: 100%;
+                padding: 10px 15px;
+            }
+
+            .usd-box {
+                flex-direction: column;
+                padding: 15px;
+            }
+
+            .usd-value {
+                margin-left: 0;
+                margin-top: 5px;
+            }
+
+            .usd-note {
+                margin-left: 0;
+                margin-top: 5px;
+            }
+
+            .controls {
+                flex-direction: column;
+                padding: 15px;
+            }
+
+            .coins-grid {
+                grid-template-columns: 1fr; /* Uma coluna em telas muito pequenas */
+                gap: 20px;
+            }
+
+            .coin-card {
+                padding: 20px;
+            }
+
+            .coin-name {
+                font-size: 1.3em;
+            }
+
+            .metric-value {
+                font-size: 1.1em;
+            }
+
+            .modal-content {
+                padding: 25px;
+                width: 95%;
+            }
+
+            .modal-title {
+                font-size: 1.5em;
+            }
+
+            .close-btn {
+                font-size: 1.8em;
+            }
+
+            .horizons {
+                grid-template-columns: repeat(2, 1fr); /* Duas colunas para horizontes */
+            }
+
+            .sentiment-title {
+                font-size: 1em;
+            }
+
+            .sentiment-value-text {
+                font-size: 1em;
+            }
+
+            .news-item {
+                padding: 10px 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.5em;
+            }
+            .user-email {
+                font-size: 0.85em;
+            }
+            .usd-label, .usd-value {
+                font-size: 0.95em;
+            }
+            .loading h2 {
+                font-size: 1.5em;
+            }
+            .loading p {
+                font-size: 1em;
+            }
+            .empty-state h2 {
+                font-size: 1.8em;
+            }
+            .empty-state p {
+                font-size: 1em;
+            }
+            .coin-name {
+                font-size: 1.2em;
+            }
+            .metric-value {
+                font-size: 1em;
+            }
+            .modal-title {
+                font-size: 1.3em;
+            }
+            .horizon strong {
+                font-size: 0.95em;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <div class="login-header">
-            <h1>🚀 Dashboard Cripto</h1>
-            <p>Sistema de Predições com Machine Learning</p>
+    <div class="container">
+        <!-- Cabeçalho da Página -->
+        <header>
+            <h1>
+                <span>🚀</span>
+                Dashboard Cripto ML
+            </h1>
+            <div class="user-info">
+                <span class="user-email">👤 {{ user_email }}</span>
+                <a href="/history" class="btn btn-secondary">📊 Histórico</a>
+                <a href="/logout" class="btn btn-danger">🚪 Sair</a>
+            </div>
+        </header>
+
+        <!-- Box de Cotação USD/BRL -->
+        <div class="usd-box">
+            <span class="usd-label">💵 Cotação USD/BRL:</span>
+            <span id="usdRate" class="usd-value">R$ 0.00</span> <!-- Valor inicial será atualizado pelo JS -->
+            <span class="usd-note">(Atualizado em tempo real)</span>
         </div>
 
-        <div id="errorMessage" class="error-message"></div>
-
-        <form id="loginForm">
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" placeholder="seu@email.com" required>
-            </div>
-
-            <div class="form-group">
-                <label for="password">Senha</label>
-                <input type="password" id="password" name="password" placeholder="Sua senha" required>
-            </div>
-
-            <button type="submit" class="btn-login" id="loginBtn">
-                Entrar
+        <!-- Controles Principais -->
+        <div class="controls">
+            <button id="analyzeBtn" class="btn btn-primary">
+                🔮 Analisar Top 20 Moedas
             </button>
-        </form>
+        </div>
 
-        <div class="credentials-info">
-            <h3>📋 Credenciais de Teste:</h3>
-            <p><strong>Email:</strong> <code>admin@example.com</code></p>
-            <p><strong>Senha:</strong> <code>admin123</code></p>
-            <p style="margin-top: 10px; font-size: 0.8em; color: #999;">ou</p>
-            <p><strong>Email:</strong> <code>user@example.com</code></p>
-            <p><strong>Senha:</strong> <code>user123</code></p>
+        <!-- Estado de Carregamento (Loading Spinner) -->
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <h2>Analisando mercado...</h2>
+            <p>Treinando modelos de Machine Learning com dados históricos e notícias</p>
+        </div>
+
+        <!-- Estado Vazio (Empty State) -->
+        <div id="emptyState" class="empty-state">
+            <h2>Bem-vindo ao Dashboard de Predições!</h2>
+            <p>Clique em "Analisar Top 20 Moedas" para começar a ver as análises.</p>
+            <p style="margin-top: 10px; font-size: 0.9em; color: #999;">
+                Nosso sistema utiliza Machine Learning com mais de 40 features técnicas e Análise de Sentimento de Notícias para prever o movimento das criptomoedas.
+            </p>
+        </div>
+
+        <!-- Grid de Cards de Moedas -->
+        <div id="coinsGrid" class="coins-grid">
+            <!-- Cards de moedas serão renderizados aqui pelo JavaScript -->
         </div>
     </div>
 
+    <!-- Modal para Detalhes da Moeda -->
+    <div id="detailsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle"></h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+
+            <div class="modal-section">
+                <span class="modal-label">Preço Atual</span>
+                <span class="modal-value" id="modalCurrentPrice"></span>
+            </div>
+
+            <div class="modal-section">
+                <span class="modal-label">Direção Predita (1 dia)</span>
+                <span class="modal-value" id="modalDirection"></span>
+            </div>
+
+            <div class="modal-section">
+                <span class="modal-label">Confiança da Predição</span>
+                <span class="modal-value" id="modalConfidence"></span>
+            </div>
+
+            <div class="modal-section">
+                <span class="modal-label">Preço Predito (1 dia)</span>
+                <span class="modal-value" id="modalPredictedPrice"></span>
+            </div>
+
+            <div class="modal-section">
+                <span class="modal-label">Predições para Horizontes</span>
+                <div class="horizons" id="modalHorizons">
+                    <!-- Horizontes serão preenchidos pelo JS -->
+                </div>
+            </div>
+
+            <div class="modal-section sentiment-section">
+                <h3 class="sentiment-title">📊 Sentimento do Mercado</h3>
+                <div class="sentiment-score-display">
+                    <div class="sentiment-bar">
+                        <div class="sentiment-fill" id="modalSentimentFill"></div>
+                    </div>
+                    <span class="sentiment-value-text" id="modalSentimentScore"></span>
+                </div>
+                <div class="sentiment-counts" id="modalSentimentCounts">
+                    <!-- Contagens de bullish/bearish/neutral -->
+                </div>
+            </div>
+
+            <div class="modal-section">
+                <h3 class="sentiment-title">📰 Notícias Recentes</h3>
+                <div class="news-list" id="modalNewsList">
+                    <!-- Notícias serão preenchidas pelo JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script JavaScript -->
     <script>
-        const loginForm = document.getElementById('loginForm');
-        const loginBtn = document.getElementById('loginBtn');
-        const errorMessage = document.getElementById('errorMessage');
+        // Seleção de elementos do DOM
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const loading = document.getElementById('loading');
+        const emptyState = document.getElementById('emptyState');
+        const coinsGrid = document.getElementById('coinsGrid');
+        const usdRateSpan = document.getElementById('usdRate');
+        const detailsModal = document.getElementById('detailsModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalCurrentPrice = document.getElementById('modalCurrentPrice');
+        const modalDirection = document.getElementById('modalDirection');
+        const modalConfidence = document.getElementById('modalConfidence');
+        const modalPredictedPrice = document.getElementById('modalPredictedPrice');
+        const modalHorizons = document.getElementById('modalHorizons');
+        const modalSentimentFill = document.getElementById('modalSentimentFill');
+        const modalSentimentScore = document.getElementById('modalSentimentScore');
+        const modalSentimentCounts = document.getElementById('modalSentimentCounts');
+        const modalNewsList = document.getElementById('modalNewsList');
 
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
+        let USD_TO_BRL = 5.44; // Valor padrão, será atualizado pela API
 
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
+        // Função para atualizar a taxa de câmbio USD/BRL
+        async function updateUSDRate() {
+            console.log('💵 Buscando cotação USD/BRL...');
+            try {
+                const response = await fetch('/api/usd-rate');
+                const data = await response.json();
+                if (data.success) {
+                    USD_TO_BRL = data.usd_rate;
+                    usdRateSpan.textContent = `R$ ${formatPrice(USD_TO_BRL)}`;
+                    console.log(`💵 Taxa atualizada: R$ ${formatPrice(USD_TO_BRL)} (${data.source})`);
+                } else {
+                    console.warn('⚠️ Falha ao obter cotação USD/BRL:', data.error);
+                }
+            } catch (error) {
+                console.error('❌ Erro ao atualizar taxa USD/BRL:', error);
+            }
+        }
 
-            // Desabilitar botão
-            loginBtn.disabled = true;
-            loginBtn.textContent = 'Entrando...';
-            errorMessage.classList.remove('active');
+        // Event listener para o botão de análise
+        analyzeBtn.addEventListener('click', analyzeCoins);
+
+        // Função principal para iniciar a análise das moedas
+        async function analyzeCoins() {
+            console.log('🔮 Iniciando análise das moedas...');
+            
+            // Desabilitar botão e mostrar loading
+            analyzeBtn.disabled = true;
+            analyzeBtn.textContent = '⏳ Analisando...';
+            loading.classList.add('active');
+            emptyState.style.display = 'none';
+            coinsGrid.innerHTML = ''; // Limpa o grid de moedas
+            coinsGrid.style.display = 'grid'; // Garante que o grid esteja visível
 
             try {
-                const response = await fetch('/login', {
+                console.log('📡 Enviando requisição POST para /api/analyze...');
+                
+                const response = await fetch('/api/analyze', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        email: email,
-                        password: password
-                    })
+                    }
                 });
 
-                const data = await response.json();
+                console.log('📊 Status da resposta:', response.status);
 
-                if (data.success) {
-                    window.location.href = '/';
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`Erro HTTP: ${response.status} - ${JSON.stringify(errorData)}`);
+                }
+
+                const data = await response.json();
+                console.log('✅ Dados recebidos:', data);
+
+                if (data.success && data.data.length > 0) {
+                    loading.classList.remove('active');
+                    renderCoins(data.data);
+                    analyzeBtn.style.display = 'none'; // Esconde o botão após a primeira análise bem-sucedida
                 } else {
-                    errorMessage.textContent = data.message || 'Credenciais inválidas';
-                    errorMessage.classList.add('active');
-                    loginBtn.disabled = false;
-                    loginBtn.textContent = 'Entrar';
+                    throw new Error('Nenhum dado de análise retornado ou sucesso falso.');
                 }
             } catch (error) {
-                errorMessage.textContent = 'Erro ao conectar ao servidor';
-                errorMessage.classList.add('active');
-                loginBtn.disabled = false;
-                loginBtn.textContent = 'Entrar';
+                console.error('❌ Erro na análise:', error);
+                loading.classList.remove('active');
+                coinsGrid.innerHTML = `
+                    <div class="error" style="grid-column: 1/-1;">
+                        <strong>Erro ao analisar moedas:</strong><br>
+                        ${error.message}
+                    </div>
+                `;
+                analyzeBtn.disabled = false;
+                analyzeBtn.textContent = '🔮 Analisar Top 20 Moedas';
+                analyzeBtn.style.display = 'block'; // Garante que o botão esteja visível para tentar novamente
             }
+        }
+
+        // Função para renderizar os cards das moedas no grid
+        function renderCoins(coins) {
+            console.log(`🎨 Renderizando ${coins.length} moedas...`);
+            
+            coinsGrid.innerHTML = ''; // Limpa o grid antes de renderizar
+            coins.forEach((coin, index) => {
+                if (coin.error) {
+                    console.warn(`⚠️ Erro no card para ${coin.symbol}: ${coin.error}`);
+                    return; // Pula moedas com erro
+                }
+
+                const sentimentClass = `sentiment-${coin.sentiment.direction.toLowerCase()}`;
+                const sentimentEmoji = getSentimentEmoji(coin.sentiment.direction);
+                const directionClass = coin.prediction_direction === 'ALTA' ? 'metric-positive' : 'metric-negative';
+                const directionEmoji = coin.prediction_direction === 'ALTA' ? '📈' : '📉';
+
+                const card = document.createElement('div');
+                card.className = 'coin-card';
+                card.innerHTML = `
+                    <div class="coin-header">
+                        <div class="coin-name">${coin.symbol}</div>
+                        <span class="sentiment-badge ${sentimentClass}">
+                            ${sentimentEmoji} ${coin.sentiment.direction}
+                        </span>
+                    </div>
+                    <div class="metrics-grid">
+                        <div class="metric-item">
+                            <span class="metric-label">Preço Atual</span>
+                            <span class="metric-value">R$ ${formatPrice(coin.current_price * USD_TO_BRL)}</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Predição (1 dia)</span>
+                            <span class="metric-value ${directionClass}">
+                                ${directionEmoji} ${coin.prediction_direction}
+                            </span>
+                        </div>
+                    </div>
+                `;
+                card.addEventListener('click', () => openModal(coin)); // Adiciona evento de clique para abrir o modal
+                coinsGrid.appendChild(card);
+            });
+            console.log('✅ Renderização de cards completa!');
+        }
+
+        // Função para abrir o modal de detalhes da moeda
+        function openModal(coin) {
+            console.log(`Abrindo modal para ${coin.symbol}`);
+            modalTitle.textContent = coin.symbol;
+            modalCurrentPrice.textContent = `R$ ${formatPrice(coin.current_price * USD_TO_BRL)}`;
+            
+            modalDirection.className = 'modal-value'; // Reset classes
+            modalDirection.classList.add(coin.prediction_direction === 'ALTA' ? 'positive' : 'negative');
+            modalDirection.innerHTML = `${coin.prediction_direction === 'ALTA' ? '📈' : '📉'} ${coin.prediction_direction}`;
+            
+            modalConfidence.textContent = `${coin.prediction_confidence.toFixed(1)}% de confiança`;
+            modalPredictedPrice.textContent = `R$ ${formatPrice(coin.predicted_price_1 * USD_TO_BRL)}`;
+
+            // Preencher horizontes
+            modalHorizons.innerHTML = `
+                <div class="horizon"><span>1 dia</span><strong>R$ ${formatPrice(coin.horizons[0] * USD_TO_BRL)}</strong></div>
+                <div class="horizon"><span>3 dias</span><strong>R$ ${formatPrice(coin.horizons[1] * USD_TO_BRL)}</strong></div>
+                <div class="horizon"><span>5 dias</span><strong>R$ ${formatPrice(coin.horizons[2] * USD_TO_BRL)}</strong></div>
+                <div class="horizon"><span>7 dias</span><strong>R$ ${formatPrice(coin.horizons[3] * USD_TO_BRL)}</strong></div>
+            `;
+
+            // Preencher sentimento
+            modalSentimentFill.style.width = `${coin.sentiment.score}%`;
+            modalSentimentScore.textContent = `${coin.sentiment.score}/100`;
+            modalSentimentCounts.innerHTML = `
+                <span>🟢 ${coin.sentiment.bullish_count}</span>
+                <span>🔴 ${coin.sentiment.bearish_count}</span>
+                <span>🟡 ${coin.sentiment.neutral_count}</span>
+            `;
+
+            // Preencher notícias
+            modalNewsList.innerHTML = '';
+            if (coin.news && coin.news.length > 0) {
+                coin.news.forEach(news => {
+                    const newsItem = document.createElement('div');
+                    newsItem.className = 'news-item';
+                    newsItem.innerHTML = `
+                        <div class="news-title">${news.title || 'Sem título'}</div>
+                        <div class="news-source">
+                            ${news.source || 'Desconhecido'} • ${getSentimentEmoji(news.sentiment)} ${news.sentiment}
+                        </div>
+                    `;
+                    modalNewsList.appendChild(newsItem);
+                });
+            } else {
+                modalNewsList.innerHTML = '<div style="text-align: center; color: #999; padding: 10px;">Nenhuma notícia recente encontrada.</div>';
+            }
+
+            detailsModal.classList.add('active'); // Ativa a exibição do modal
+        }
+
+        // Função para fechar o modal de detalhes
+        function closeModal() {
+            console.log('Fechando modal.');
+            detailsModal.classList.remove('active');
+        }
+
+        // Funções auxiliares
+
+        // Formata um número para o padrão monetário brasileiro (BRL)
+        function formatPrice(price) {
+            return price.toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        // Retorna o emoji correspondente ao sentimento
+        function getSentimentEmoji(sentiment) {
+            if (sentiment === 'BULLISH') return '🟢';
+            if (sentiment === 'BEARISH') return '🔴';
+            return '🟡';
+        }
+
+        // Retorna a classe CSS de confiança (não usada nos cards simplificados, mas útil para o modal)
+        function getConfidenceClass(confidence) {
+            if (confidence >= 70) return 'confidence-alta';
+            if (confidence >= 50) return 'confidence-moderada';
+            return 'confidence-baixa';
+        }
+
+        // Inicialização: Atualiza a taxa USD/BRL ao carregar a página
+        document.addEventListener('DOMContentLoaded', () => {
+            updateUSDRate();
+            // Atualiza a taxa a cada 30 segundos
+            setInterval(updateUSDRate, 30000); 
+            console.log('Página carregada. Inicializando...');
         });
     </script>
 </body>
