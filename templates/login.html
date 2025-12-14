@@ -1,39 +1,224 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-    <meta charset="utf-8">
-    <title>Login</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Dashboard Cripto</title>
     <style>
-        body { font-family: Arial; background: #f4f4f4; padding: 30px; }
-        .box {
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-container {
             background: white;
-            width: 350px;
-            padding: 25px;
-            margin: auto;
-            border-radius: 12px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 400px;
         }
-        input, button {
-            width: 100%; padding: 12px; margin-top: 10px;
-            border-radius: 8px; border: 1px solid #ccc;
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
         }
-        button { background: #2563eb; color: white; cursor: pointer; }
+
+        .login-header h1 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .login-header p {
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-login:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            font-size: 0.9em;
+        }
+
+        .error-message.active {
+            display: block;
+        }
+
+        .credentials-info {
+            margin-top: 25px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .credentials-info h3 {
+            color: #667eea;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        .credentials-info p {
+            color: #666;
+            font-size: 0.85em;
+            margin: 5px 0;
+        }
+
+        .credentials-info code {
+            background: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #333;
+            font-family: monospace;
+        }
     </style>
 </head>
 <body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>🚀 Dashboard Cripto</h1>
+            <p>Sistema de Predições com Machine Learning</p>
+        </div>
 
-<div class="box">
-    <h2>Login</h2>
+        <div id="errorMessage" class="error-message"></div>
 
-    <form method="POST">
-        <input type="email" name="email" placeholder="E-mail" required>
-        <input type="password" name="password" placeholder="Senha" required>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" placeholder="seu@email.com" required>
+            </div>
 
-        <button type="submit">Entrar</button>
-    </form>
+            <div class="form-group">
+                <label for="password">Senha</label>
+                <input type="password" id="password" name="password" placeholder="Sua senha" required>
+            </div>
 
-    <p>Não tem conta? <a href="/register">Registrar</a></p>
-</div>
+            <button type="submit" class="btn-login" id="loginBtn">
+                Entrar
+            </button>
+        </form>
 
+        <div class="credentials-info">
+            <h3>📋 Credenciais de Teste:</h3>
+            <p><strong>Email:</strong> <code>admin@example.com</code></p>
+            <p><strong>Senha:</strong> <code>admin123</code></p>
+            <p style="margin-top: 10px; font-size: 0.8em; color: #999;">ou</p>
+            <p><strong>Email:</strong> <code>user@example.com</code></p>
+            <p><strong>Senha:</strong> <code>user123</code></p>
+        </div>
+    </div>
+
+    <script>
+        const loginForm = document.getElementById('loginForm');
+        const loginBtn = document.getElementById('loginBtn');
+        const errorMessage = document.getElementById('errorMessage');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            // Desabilitar botão
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Entrando...';
+            errorMessage.classList.remove('active');
+
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    window.location.href = '/';
+                } else {
+                    errorMessage.textContent = data.message || 'Credenciais inválidas';
+                    errorMessage.classList.add('active');
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = 'Entrar';
+                }
+            } catch (error) {
+                errorMessage.textContent = 'Erro ao conectar ao servidor';
+                errorMessage.classList.add('active');
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Entrar';
+            }
+        });
+    </script>
 </body>
 </html>
